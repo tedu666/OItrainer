@@ -1,0 +1,300 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>OI 教练模拟器</title>
+<link rel="stylesheet" href="styles.css">
+<script>
+  (function(){
+    function injectCF(){
+      var s = document.createElement('script');
+      s.defer = true;
+      s.src = 'https://static.cloudflareinsights.com/beacon.min.js';
+      s.setAttribute('data-cf-beacon', '{"token": "cd3db41765ea4c17be0930b3f94e3c3a"}');
+      document.head.appendChild(s);
+    }
+    function shouldLoad(){
+      try{
+        var start = (performance.timing && performance.timing.navigationStart) || 0;
+        var elapsed = performance.now ? performance.now() : (Date.now() - start);
+        return elapsed <= 2000;
+      }catch(e){ return false; }
+    }
+    document.addEventListener('DOMContentLoaded', function(){ if(shouldLoad()) injectCF(); });
+  })();
+</script>
+</head>
+<body>
+<div class="container">
+  <header>
+    <div>
+      <h1>OI 教练模拟器</h1>
+    </div>
+    <div class="topline">
+      <div id="header-week" class="small">第 1 周</div>
+      <div id="header-province" class="small">省份: -</div>
+      <div id="header-budget" class="small">经费: ¥0</div>
+      <div id="header-reputation" class="small">声誉: 0</div>
+  <!-- moved: weather and next competition summary (was in 周信息) -->
+      <div id="header-weather" class="small">天气: <span id="header-weather-text"></span> / 温度: <span id="header-temp-header">0.0°C</span></div>
+  <div id="header-next-competition" class="small muted">下场比赛: <span id="header-next-comp-small"></span></div>
+    </div>
+  </header>
+
+  <!-- 主面板：左 - 学生 / 右 - 操作 -->
+  <div class="row">
+    <div class="col panel" style="flex: 1 1 600px;">
+      <div class="flex-between">
+        <h3 style="margin:0">学生与状态</h3>
+        <div class="small">舒适度: <span id="comfort-val">50</span></div>
+      </div>
+      <div id="student-list" style="margin-top:10px;"></div>
+
+      <!-- 设施升级界面已隐藏 -->
+      <div style="margin-top:12px; display:none;">
+        <h4 style="margin:0">设施</h4>
+        <div class="facility-grid" style="margin-top:8px">
+          <div class="facility">
+            <div class="fac-label">计算机</div>
+            <div id="fac-computer" class="stat">1</div>
+            <div class="small muted">提升综合训练效率</div>
+            <div class="fac-action"><button class="btn upgrade" data-fac="computer" id="upgrade-computer">升级</button></div>
+          </div>
+
+          <div class="facility">
+            <div class="fac-label">资料库</div>
+            <div id="fac-library" class="stat">1</div>
+            <div class="small muted">提升知识训练效率</div>
+            <div class="fac-action"><button class="btn upgrade" data-fac="library" id="upgrade-library">升级</button></div>
+          </div>
+
+          <div class="facility">
+            <div class="fac-label">空调</div>
+            <div id="fac-ac" class="stat">1</div>
+            <div class="small muted">提升舒适度，缓解极端天气影响</div>
+            <div class="fac-action"><button class="btn upgrade" data-fac="ac" id="upgrade-ac">升级</button></div>
+          </div>
+
+          <div class="facility">
+            <div class="fac-label">宿舍</div>
+            <div id="fac-dorm" class="stat">1</div>
+            <div class="small muted">提升舒适度</div>
+            <div class="fac-action"><button class="btn upgrade" data-fac="dorm" id="upgrade-dorm">升级</button></div>
+          </div>
+
+          <div class="facility">
+            <div class="fac-label">食堂</div>
+            <div id="fac-canteen" class="stat">1</div>
+            <div class="small muted">减少训练压力</div>
+            <div class="fac-action"><button class="btn upgrade" data-fac="canteen" id="upgrade-canteen">升级</button></div>
+          </div>
+
+          <div class="facility">
+            <div class="fac-label">维护费/周</div>
+            <div id="fac-maint" class="stat">0</div>
+            <div class="small muted">所有设施每周维护费用</div>
+            <div class="fac-action"><button class="btn upgrade ghost" data-fac="maint" id="upgrade-maint">固定</button></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 移动到这里：周信息、下场比赛、训话、日志 -->
+      <div style="margin-top:16px; display:flex; gap:12px; align-items:flex-start">
+        <div style="flex:1">
+          <h4 style="margin:0 0 8px 0">周信息</h4>
+          <div class="small" style="line-height:1.6">
+            <div>第 <span id="info-week">1</span> 周 / 共 52 周</div>
+            <div>天气: <span id="info-weather">晴</span> / 温度: <span id="info-temp">20.0°C</span></div>
+            <div>预测 4 周 开支: ¥<span id="info-future-expense">0</span></div>
+            <div id="info-next-competition" class="small muted"></div>
+          </div>
+        </div>
+        
+        <div id="facilities-panel" style="flex:1">
+          <h4 style="margin:0 0 8px 0">设施状态</h4>
+          <div class="small" style="line-height:1.8">
+            <div>计算机 Lv.<span id="fac-computer-display">1</span> | 资料库 Lv.<span id="fac-library-display">1</span></div>
+            <div>空调 Lv.<span id="fac-ac-display">1</span> | 宿舍 Lv.<span id="fac-dorm-display">1</span></div>
+            <div>食堂 Lv.<span id="fac-canteen-display">1</span> | 维护费 ¥<span id="fac-maint-display">0</span></div>
+          </div>
+          <button id="action-upgrade-facility" class="btn" style="margin-top:8px;width:100%;background:#38a169;color:#fff;padding:8px;font-size:13px;border-radius:6px;border:none;cursor:pointer">🏗️ 升级设施</button>
+        </div>
+      </div>
+
+      <div style="margin-top:16px; display:flex; gap:12px; align-items:flex-start">
+        <div style="flex:1">
+          <h4 style="margin:0 0 8px 0">下场比赛</h4>
+          <div id="next-competition-panel" class="next-panel normal" style="margin:0">
+            <div id="next-comp" style="margin-bottom:8px">无</div>
+            <div id="daily-quote" class="small muted">一句话加载中...</div>
+          </div>
+        </div>
+      </div>
+
+      <div style="margin-top:16px">
+        <h4 style="margin:0 0 8px 0">训话</h4>
+        <input type="text" id="coach-speech-input" placeholder="输入训话内容..." style="width:100%;padding:8px;border:1px solid #ddd;border-radius:6px;font-size:14px;box-sizing:border-box" />
+      </div>
+
+      <div style="margin-top:16px">
+        <h4 style="margin:0 0 8px 0">日志</h4>
+        <div id="log" style="height:80px;overflow:auto;border:1px solid #eee;padding:8px;border-radius:6px;background:#fff;font-size:13px"></div>
+      </div>
+    </div>
+
+  <div class="col panel side-panel" style="flex: 0 0 360px;">
+  <h3 style="margin-top:0">本周行动（每个行动持续1周）</h3>
+      <div class="action-cards">
+        <div class="action-card" id="action-train" role="button" tabindex="0">
+          <div class="card-title">训练</div>
+          <div class="card-desc">安排学生进行专项训练，提高实力</div>
+        </div>
+        <div class="action-card" id="action-entertain" role="button" tabindex="0">
+          <div class="card-title">娱乐</div>
+          <div class="card-desc">放松娱乐，缓解压力，提升舒适度</div>
+        </div>
+        <div class="action-card" id="action-mock" role="button" tabindex="0">
+          <div class="card-title">模拟赛</div>
+          <div class="card-desc">进行内部模拟比赛，检验训练成果</div>
+        </div>
+        <div class="action-card" id="action-outing" role="button" tabindex="0">
+          <div class="card-title">集训</div>
+          <div class="card-desc">参加合适的外出集训，集中提升训练效率，</div>
+        </div>
+        <div class="action-card" id="action-resign" role="button" tabindex="0">
+          <div class="card-title">辞职</div>
+          <div class="card-desc">立即结束本赛季并进行结算</div>
+        </div>
+        <div class="action-card" id=""  tabindex="0" style="display:inline-block;gap:8px;">
+          <button id="action-upgrade-facility" class="btn" style="position:relative;display:inline-block;width:49%;background:#38a169;color:#fff;padding:8px;font-size:13px;border-radius:6px;border:none;cursor:pointer" onclick="saveFileGame()">下载存档</button>
+          <button id="action-upgrade-facility" class="btn" style="position:relative;display:inline-block;width:49%;background:#38a169;color:#fff;padding:8px;font-size:13px;border-radius:6px;border:none;cursor:pointer" onclick="loadFileGame()">读取存档</button>
+        </div>
+
+        <!-- 动态突发事件容器：JS 会在此处渲染任意数量的事件卡，支持iOS风格的滚动折叠 -->
+        <div id="event-cards-container"></div>
+      </div>
+    </div>
+  </div>
+
+
+
+
+  <div class="panel" id="footer-panel" style="display: none;">
+    <div class="row">
+      <div class="col small">
+        <strong>结算/季节设定</strong>
+  <div>赛季总周数: 52</div>
+      </div>
+      <div class="col small">
+        <strong>比赛日程</strong>
+        <div class="small muted" style="margin-top:4px">比赛顺序（每季两轮）：CSP-S1 → CSP-S2 → NOIP → 省选 → NOI</div>
+        <div id="comp-schedule" class="small muted" style="margin-top:6px"></div>
+      </div>
+
+    </div>
+  </div>
+
+</div>
+
+<!-- 模态区域 -->
+<div id="modal-root"></div>
+
+<script>
+  // 生成时间戳参数，确保每次刷新都重新加载JS文件
+  const timestamp = Date.now();
+  const scripts = [
+    'tutorial.js',
+    'events.js',
+    'lib/constants.js',
+    'lib/utils.js',
+    'lib/models.js',
+    'lib/talent.js',
+    'lib/task.js',
+    'lib/competitions.js',
+    'lib/contest-ui.js',
+    'lib/contest-integration.js',
+    'lib/national-team.js',
+    'game.js',
+    'render.js',
+    'debug.js'
+  ];
+  
+  // 按顺序加载JS文件，确保依赖关系正确
+  function loadScriptsSequentially(scriptList, index = 0) {
+    if (index >= scriptList.length) {
+      return; // 所有脚本加载完成
+    }
+    
+    const script = document.createElement('script');
+    script.src = `${scriptList[index]}?v=${timestamp}`;
+    
+    script.onload = function() {
+      // 当前脚本加载完成，加载下一个
+      loadScriptsSequentially(scriptList, index + 1);
+    };
+    
+    script.onerror = function() {
+      console.error(`Failed to load script: ${scriptList[index]}`);
+      // 即使失败也继续加载下一个
+      loadScriptsSequentially(scriptList, index + 1);
+    };
+    
+    document.head.appendChild(script);
+  }
+  
+  // 开始按顺序加载
+  loadScriptsSequentially(scripts);
+</script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.2.0/crypto-js.min.js"></script>
+<script>
+(function() {
+  const input = document.getElementById('coach-speech-input');
+  if (!input) return;
+
+  input.addEventListener('keydown', function(event) {
+    if (event.key === 'Enter' || event.keyCode === 13) {
+      event.preventDefault();
+      const speechText = (input.value || '').trim();
+      if (!speechText) return;
+
+      // 触发训话事件
+      const hash = CryptoJS.SHA256(speechText).toString(CryptoJS.enc.Hex);
+      document.dispatchEvent(new CustomEvent('coach-speech', {
+        detail: {
+          text: speechText,
+          hash: hash
+        }
+      }));
+      
+      input.value = '';
+    }
+  });
+})();
+</script>
+<script>
+  // If game.html is opened directly and there's no save in localStorage and
+  // no new-game params, redirect to start page so user chooses new game.
+  (function(){
+    try{
+      const qs = new URLSearchParams(window.location.search);
+      if(qs && qs.get('new')==='1') return; // creating a new game via start page
+      const raw = localStorage.getItem('oi_coach_save');
+      if(!raw){ window.location.href = 'start.html'; }
+    }catch(e){ /* ignore */ }
+  })();
+</script>
+<footer style="text-align:center;padding:12px 8px;color:#666;font-size:13px;border-top:1px solid #eee;margin-top:18px">
+  OI 教练模拟器 · 改改版
+
+  <br>
+
+  Based on 开源项目 · 原作者 @Dreamers-seve · GitHub: <a href="https://github.com/seve42/OItrainer" target="_blank" rel="noopener">https://github.com/seve42/OItrainer</a>
+</footer>
+  <!-- winter plan link (shown until 2026-03-01) -->
+    <!-- winter plan injection: center link inside footer (or fixed bottom if no footer) -->
+    <div class="disclaimer" role="note" aria-label="免责声明" style="margin-top:8px;margin-bottom:18px;font-size:13px;color:#444;">
+      免责声明：本游戏为虚构
+    </div>
+<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'99d3dab04a75f7c5',t:'MTc2MjkyNzcwMA=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+</html>
